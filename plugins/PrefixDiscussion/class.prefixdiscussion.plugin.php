@@ -1,6 +1,6 @@
 <?php
 
-$PluginInfo['prefixDiscussion'] = array(
+$PluginInfo['PrefixDiscussion'] = array(
     'Name' => 'Prefix Discussion',
     'Description' => 'Allows prefixing discussion titles with a configurable set of terms.',
     'Version' => '1.0',
@@ -14,7 +14,7 @@ $PluginInfo['prefixDiscussion'] = array(
     ),
     'Author' => 'Robin Jurinka',
     'AuthorUrl' => 'https://vanillaforums.org/profile/44046/R_J',
-    'SettingsUrl' => '/dashboard/settings/PrefixDiscussion',
+    'SettingsUrl' => '/dashboard/settings/prefixDiscussion',
     'SettingsPermission' => 'Vanilla.PrefixDiscussion.Manage',
     'License' => 'MIT'
 );
@@ -34,9 +34,9 @@ $PluginInfo['prefixDiscussion'] = array(
  */
 class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
-     * Build array of prefixes on each instantiation.
+     * Get the list of prefixes
      *
-     * @return Array of Prefixes
+     * @return array List of prefixes
      * @package PrefixDiscussion
      * @since 0.2
      */
@@ -86,7 +86,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
      * Barebone config screen.
      *
-     * @param object $sender SettingsController.
+     * @param SettingsController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -94,6 +94,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         $sender->permission('Vanilla.PrefixDiscussion.Manage');
         $sender->setData('Title', t('Prefix Discussion Settings'));
         $sender->addSideMenu('dashboard/settings/plugins');
+
         $configurationModule = new ConfigurationModule($sender);
         $configurationModule->initialize(array(
             'PrefixDiscussion.Prefixes',
@@ -105,7 +106,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
      * Render input box.
      *
-     * @param object $sender PostController.
+     * @param PostController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -128,7 +129,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
      * Add prefix to discussion title.
      *
-     * @param object $sender PostController.
+     * @param DiscussionController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -154,8 +155,8 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * Does not work for table view since there is no appropriate event
      * in Vanilla 2.1.
      *
-     * @param object $sender Vanilla controller.
-     * @param mixed $args Event arguments.
+     * @param object $sender Sending controller instance.
+     * @param array $args Event arguments.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -177,7 +178,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
      * Add css to discussions list if needed.
      *
-     * @param object $sender DiscussionsController.
+     * @param DiscussionsController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -189,7 +190,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
      * Add css to categories list if needed.
      *
-     * @param object $sender DiscussionsController.
+     * @param CategoriesController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
