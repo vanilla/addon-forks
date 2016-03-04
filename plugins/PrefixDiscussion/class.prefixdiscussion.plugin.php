@@ -1,9 +1,9 @@
 <?php
 
-$PluginInfo['prefixDiscussion'] = array(
+$PluginInfo['PrefixDiscussion'] = array(
     'Name' => 'Prefix Discussion',
     'Description' => 'Allows prefixing discussion titles with a configurable set of terms.',
-    'Version' => '1.0',
+    'Version' => '1.1',
     'RequiredApplications' => array('Vanilla' => '2.2'),
     'MobileFriendly' => true,
     'HasLocale' => true,
@@ -34,22 +34,46 @@ $PluginInfo['prefixDiscussion'] = array(
  */
 class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
-     * Build array of prefixes on each instantiation.
+     * Get the prefixes' separator
      *
-     * @return Array of Prefixes
+     * @return string Prefix separator
+     * @package PrefixDiscussion
+     * @since 1.0
+     */
+    public static function getPrefixesSeparator() {
+        return c('PrefixDiscussion.ListSeparator', ';');
+    }
+
+    /**
+     * Get the list of prefixes
+     *
+     * @return array List of prefixes
      * @package PrefixDiscussion
      * @since 0.2
      */
-    public function getPrefixes() {
-        // Get prefixes from config.
-        $prefixes = array_filter(
-            explode(
-                Gdn::config('PrefixDiscussion.ListSeparator', ';'),
-                Gdn::config('PrefixDiscussion.Prefixes', 'Question;Solved')
-            )
-        );
-        $prefixes = array_combine($prefixes, $prefixes);
-        return ['' => t('PrefixDiscussion.None', '-')] + $prefixes;
+    public static function getPrefixes() {
+        static $cachedPrefixes = null;
+
+        if ($cachedPrefixes === null) {
+            $cachedPrefixes = array();
+
+            // Get prefixes from config.
+            $prefixes = explode(
+                self::getPrefixesSeparator(),
+                c('PrefixDiscussion.Prefixes', 'Question'.self::getPrefixesSeparator().'Solved')
+            );
+
+            // Trim and remove empty prefixes.
+            $prefixes = array_filter(
+                array_map('trim', $prefixes)
+            );
+
+            if (count($prefixes)) {
+                $cachedPrefixes = array_combine($prefixes, $prefixes);
+            }
+        }
+
+        return $cachedPrefixes;
     }
 
     /**
@@ -81,12 +105,23 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
             ->table('Discussion')
             ->column('Prefix', 'varchar(64)', true)
             ->set();
+
+        /*
+         * Before version 1.1, when a discussion used an empty prefix, an empty string was
+         * inserted in the DB. Records that were created before the plugin was installed
+         * had NULL as value. It is generally not a good idea to mix empty strings and NULLs values.
+         */
+        $fixDone = c('PrefixDiscussion.PrefixMixingFixDone', false); // If we update from an older version
+        if (!$fixDone) {
+            Gdn::sql()->update('Discussion', array('Prefix' => null), array('Prefix' => ''));
+            saveToConfig('PrefixDiscussion.PrefixMixingFixDone', true);
+        }
     }
 
     /**
      * Barebone config screen.
      *
-     * @param object $sender SettingsController.
+     * @param SettingsController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -94,6 +129,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         $sender->permission('Vanilla.PrefixDiscussion.Manage');
         $sender->setData('Title', t('Prefix Discussion Settings'));
         $sender->addSideMenu('dashboard/settings/plugins');
+
         $configurationModule = new ConfigurationModule($sender);
         $configurationModule->initialize(array(
             'PrefixDiscussion.Prefixes',
@@ -105,7 +141,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
      * Render input box.
      *
-     * @param object $sender PostController.
+     * @param PostController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -119,16 +155,17 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
 
         // Render output.
+        $noPrefix = array('' => t('PrefixDiscussion.None', '-'));
         echo '<div class="P PrefixDiscussion">';
         echo $sender->Form->label('Discussion Prefix', 'Prefix');
-        echo $sender->Form->dropDown('Prefix', $this->getPrefixes());
+        echo $sender->Form->dropDown('Prefix', $noPrefix + self::getPrefixes());
         echo '</div>';
     }
 
     /**
      * Add prefix to discussion title.
      *
-     * @param object $sender PostController.
+     * @param DiscussionController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -154,8 +191,8 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * Does not work for table view since there is no appropriate event
      * in Vanilla 2.1.
      *
-     * @param object $sender Vanilla controller.
-     * @param mixed $args Event arguments.
+     * @param object $sender Sending controller instance.
+     * @param array $args Event arguments.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -177,7 +214,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
      * Add css to discussions list if needed.
      *
-     * @param object $sender DiscussionsController.
+     * @param DiscussionsController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
@@ -185,15 +222,28 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
     }
 
-
     /**
      * Add css to categories list if needed.
      *
-     * @param object $sender DiscussionsController.
+     * @param CategoriesController $sender Sending controller instance.
      * @package PrefixDiscussion
      * @since 0.1
      */
     public function categoriesController_render_before($sender) {
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
+    }
+
+    /**
+     * Prevent from mixing NULLs and empty strings in the DB
+     *
+     * @param DiscussionModel $sender Sending controller instance.
+     * @param array $args Event arguments.
+     * @package PrefixDiscussion
+     * @since 1.1
+     */
+    public function discussionModel_beforeSaveDiscussion_handler($sender, $args) {
+        if ($args['FormPostValues']['Prefix'] === '') {
+            $args['FormPostValues']['Prefix'] = null;
+        }
     }
 }
