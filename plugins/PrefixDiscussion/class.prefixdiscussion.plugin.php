@@ -3,7 +3,7 @@
 $PluginInfo['PrefixDiscussion'] = array(
     'Name' => 'Prefix Discussion',
     'Description' => 'Allows prefixing discussion titles with a configurable set of terms.',
-    'Version' => '1.1',
+    'Version' => '1.2',
     'RequiredApplications' => array('Vanilla' => '2.2'),
     'MobileFriendly' => true,
     'HasLocale' => true,
@@ -242,7 +242,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * @since 1.1
      */
     public function discussionModel_beforeSaveDiscussion_handler($sender, $args) {
-        if ($args['FormPostValues']['Prefix'] === '') {
+        if (!in_array($args['FormPostValues']['Prefix'], self::getPrefixes())) {
             $args['FormPostValues']['Prefix'] = null;
         }
     }
