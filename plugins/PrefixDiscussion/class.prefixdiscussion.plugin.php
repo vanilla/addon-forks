@@ -1,23 +1,23 @@
 <?php
 
-$PluginInfo['PrefixDiscussion'] = array(
+$PluginInfo['PrefixDiscussion'] = [
     'Name' => 'Prefix Discussion',
     'Description' => 'Allows prefixing discussion titles with a configurable set of terms.',
-    'Version' => '1.2',
-    'RequiredApplications' => array('Vanilla' => '2.2'),
+    'Version' => '1.4.0',
+    'RequiredApplications' => ['Vanilla' => '2.3'],
     'MobileFriendly' => true,
     'HasLocale' => true,
-    'RegisterPermissions' => array(
+    'RegisterPermissions' => [
         'Vanilla.PrefixDiscussion.Add',
         'Vanilla.PrefixDiscussion.View',
         'Vanilla.PrefixDiscussion.Manage'
-    ),
+    ],
     'Author' => 'Robin Jurinka',
-    'AuthorUrl' => 'https://vanillaforums.org/profile/44046/R_J',
-    'SettingsUrl' => '/dashboard/settings/PrefixDiscussion',
+    'AuthorUrl' => 'https://vanillaforums.org/profile/r_j',
+    'SettingsUrl' => '/dashboard/settings/prefixdiscussion',
     'SettingsPermission' => 'Vanilla.PrefixDiscussion.Manage',
     'License' => 'MIT'
-);
+];
 
 /**
  * PrefixDiscussion allows users to add prefixes to discussions.
@@ -36,9 +36,9 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
      * Get the prefixes' separator
      *
-     * @return string Prefix separator
      * @package PrefixDiscussion
      * @since 1.0
+     * @return string Prefix separator
      */
     public static function getPrefixesSeparator() {
         return c('PrefixDiscussion.ListSeparator', ';');
@@ -47,15 +47,15 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
     /**
      * Get the list of prefixes
      *
-     * @return array List of prefixes
      * @package PrefixDiscussion
      * @since 0.2
+     * @return array List of prefixes
      */
     public static function getPrefixes() {
         static $cachedPrefixes = null;
 
         if ($cachedPrefixes === null) {
-            $cachedPrefixes = array();
+            $cachedPrefixes = [];
 
             // Get prefixes from config.
             $prefixes = explode(
@@ -81,15 +81,14 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      *
      * @package PrefixDiscussion
      * @since 0.1
+     * @return  void.
      */
     public function setup() {
         // Init some config settings.
-        touchConfig(
-            array(
-                'PrefixDiscussion.ListSeparator' => ';',
-                'PrefixDiscussion.Prefixes' => 'Question;Solved'
-            )
-        );
+        touchConfig([
+            'PrefixDiscussion.ListSeparator' => ';',
+            'PrefixDiscussion.Prefixes' => 'Question;Solved'
+        ]);
         // Change db structure.
         $this->structure();
     }
@@ -99,6 +98,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      *
      * @package PrefixDiscussion
      * @since 0.1
+     * @return  void.
      */
     public function structure() {
         Gdn::database()->structure()
@@ -111,9 +111,11 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
          * inserted in the DB. Records that were created before the plugin was installed
          * had NULL as value. It is generally not a good idea to mix empty strings and NULLs values.
          */
-        $fixDone = c('PrefixDiscussion.PrefixMixingFixDone', false); // If we update from an older version
-        if (!$fixDone) {
-            Gdn::sql()->update('Discussion', array('Prefix' => null), array('Prefix' => ''));
+        if (c('PrefixDiscussion.PrefixMixingFixDone', false) != true) {
+            // If we update from an older version
+            $sql = clone Gdn::sql();
+            $sql->reset();
+            $sql->update('Discussion', ['Prefix' => null], ['Prefix' => '']);
             saveToConfig('PrefixDiscussion.PrefixMixingFixDone', true);
         }
     }
@@ -122,8 +124,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * Barebone config screen.
      *
      * @param SettingsController $sender Sending controller instance.
+     *
      * @package PrefixDiscussion
      * @since 0.1
+     * @return void.
      */
     public function settingsController_prefixDiscussion_create($sender) {
         $sender->permission('Vanilla.PrefixDiscussion.Manage');
@@ -131,10 +135,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         $sender->addSideMenu('dashboard/settings/plugins');
 
         $configurationModule = new ConfigurationModule($sender);
-        $configurationModule->initialize(array(
+        $configurationModule->initialize([
             'PrefixDiscussion.Prefixes',
             'PrefixDiscussion.ListSeparator'
-        ));
+        ]);
         $configurationModule->renderAll();
     }
 
@@ -142,8 +146,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * Render input box.
      *
      * @param PostController $sender Sending controller instance.
+     *
      * @package PrefixDiscussion
      * @since 0.1
+     * @return  void.
      */
     public function postController_beforeBodyInput_handler($sender) {
         // Only show dropdown if permission is set.
@@ -155,7 +161,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
 
         // Render output.
-        $noPrefix = array('' => t('PrefixDiscussion.None', '-'));
+        $noPrefix = ['' => t('PrefixDiscussion.None', '-')];
         echo '<div class="P PrefixDiscussion">';
         echo $sender->Form->label('Discussion Prefix', 'Prefix');
         echo $sender->Form->dropDown('Prefix', $noPrefix + self::getPrefixes());
@@ -166,23 +172,29 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * Add prefix to discussion title.
      *
      * @param DiscussionController $sender Sending controller instance.
+     *
      * @package PrefixDiscussion
      * @since 0.1
+     * @return  void.
      */
     public function discussionController_beforeDiscussionRender_handler($sender) {
         if (!checkPermission('Vanilla.PrefixDiscussion.View')) {
             return;
         }
-        $prefix = $sender->Discussion->Prefix;
+        $discussion = $sender->data('Discussion');
+        $prefix = val('Prefix', $discussion, '');
         if ($prefix == '') {
             return;
         }
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
-        $sender->Discussion->Name = wrap(
-            $prefix,
-            'span',
-            array('class' => 'PrefixDiscussion Sp'.str_replace(' ', '_', $prefix))
-        ).$sender->Discussion->Name;
+        $sender->setData(
+            'Discussion.Name',
+            wrap(
+                $prefix,
+                'span',
+                ['class' => 'PrefixDiscussion Sp'.str_replace(' ', '_', $prefix)]
+            ).$discussion->Name
+        );
     }
 
     /**
@@ -191,10 +203,13 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * Does not work for table view since there is no appropriate event
      * in Vanilla 2.1.
      *
-     * @param object $sender Sending controller instance.
-     * @param array $args Event arguments.
+     * @param GardenController $sender Sending controller instance.
+     * @param array            $args   Event arguments.
+     *
      * @package PrefixDiscussion
      * @since 0.1
+     *
+     * @return  void.
      */
     public function base_beforeDiscussionName_handler($sender, $args) {
         if (!checkPermission('Vanilla.PrefixDiscussion.View')) {
@@ -207,7 +222,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         $args['Discussion']->Name = wrap(
             $prefix,
             'span',
-            array('class' => 'PrefixDiscussion Sp'.str_replace(' ', '_', $prefix))
+            ['class' => 'PrefixDiscussion Sp'.str_replace(' ', '_', $prefix)]
         ).$args['Discussion']->Name;
     }
 
@@ -215,8 +230,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * Add css to discussions list if needed.
      *
      * @param DiscussionsController $sender Sending controller instance.
+     *
      * @package PrefixDiscussion
      * @since 0.1
+     * @return  void.
      */
     public function discussionsController_render_before($sender) {
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
@@ -226,8 +243,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * Add css to categories list if needed.
      *
      * @param CategoriesController $sender Sending controller instance.
+     *
      * @package PrefixDiscussion
      * @since 0.1
+     * @return  void.
      */
     public function categoriesController_render_before($sender) {
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
@@ -237,9 +256,11 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * Prevent from mixing NULLs and empty strings in the DB
      *
      * @param DiscussionModel $sender Sending controller instance.
-     * @param array $args Event arguments.
+     * @param array           $args   Event arguments.
+     *
      * @package PrefixDiscussion
      * @since 1.1
+     * @return  void.
      */
     public function discussionModel_beforeSaveDiscussion_handler($sender, $args) {
         if (!in_array($args['FormPostValues']['Prefix'], self::getPrefixes())) {
