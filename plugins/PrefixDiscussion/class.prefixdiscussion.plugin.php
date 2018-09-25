@@ -3,7 +3,7 @@
 $PluginInfo['PrefixDiscussion'] = [
     'Name' => 'Prefix Discussion',
     'Description' => 'Allows prefixing discussion titles with a configurable set of terms.',
-    'Version' => '1.4.0',
+    'Version' => '1.4.1',
     'RequiredApplications' => ['Vanilla' => '2.3'],
     'MobileFriendly' => true,
     'HasLocale' => true,
@@ -186,6 +186,11 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         if ($prefix == '') {
             return;
         }
+        
+        // Purify the prefix.
+        $formatter = Gdn::factory($formatMethod.'Formatter')) {
+        $prefix = $formatter->format($prefix);
+        
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
         $sender->setData(
             'Discussion.Name',
@@ -219,6 +224,11 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         if ($prefix == '') {
             return;
         }
+        
+        // Purify the prefix.
+        $formatter = Gdn::factory($formatMethod.'Formatter')) {
+        $prefix = $formatter->format($prefix);
+        
         $args['Discussion']->Name = wrap(
             $prefix,
             'span',
