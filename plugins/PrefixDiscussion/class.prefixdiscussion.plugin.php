@@ -135,6 +135,9 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         $sender->addSideMenu('dashboard/settings/plugins');
 
         $configurationModule = new ConfigurationModule($sender);
+        $formPrefixes = $sender->Form->getFormValue('PrefixDiscussion.Prefixes');
+        $formatedPrefixes = Gdn_Format::plainText($formPrefixes);
+        $sender->Form->setFormValue('PrefixDiscussion.Prefixes', $formatedPrefixes);
         $configurationModule->initialize([
             'PrefixDiscussion.Prefixes',
             'PrefixDiscussion.ListSeparator'
@@ -188,8 +191,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         }
         
         // Purify the prefix.
-        $formatter = Gdn::factory($formatMethod.'Formatter')) {
-        $prefix = $formatter->format($prefix);
+        $prefix = Gdn_Format::plainText($prefix);
         
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
         $sender->setData(
@@ -226,8 +228,7 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         }
         
         // Purify the prefix.
-        $formatter = Gdn::factory($formatMethod.'Formatter')) {
-        $prefix = $formatter->format($prefix);
+        $prefix = Gdn_Format::plainText($prefix);
         
         $args['Discussion']->Name = wrap(
             $prefix,
