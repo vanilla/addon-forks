@@ -3,7 +3,7 @@
 $PluginInfo['PrefixDiscussion'] = [
     'Name' => 'Prefix Discussion',
     'Description' => 'Allows prefixing discussion titles with a configurable set of terms.',
-    'Version' => '1.4.0',
+    'Version' => '1.4.1',
     'RequiredApplications' => ['Vanilla' => '2.3'],
     'MobileFriendly' => true,
     'HasLocale' => true,
@@ -135,6 +135,9 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         $sender->addSideMenu('dashboard/settings/plugins');
 
         $configurationModule = new ConfigurationModule($sender);
+        $formPrefixes = $sender->Form->getFormValue('PrefixDiscussion.Prefixes');
+        $formatedPrefixes = Gdn_Format::plainText($formPrefixes);
+        $sender->Form->setFormValue('PrefixDiscussion.Prefixes', $formatedPrefixes);
         $configurationModule->initialize([
             'PrefixDiscussion.Prefixes',
             'PrefixDiscussion.ListSeparator'
@@ -186,6 +189,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         if ($prefix == '') {
             return;
         }
+        
+        // Purify the prefix.
+        $prefix = Gdn_Format::plainText($prefix);
+        
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
         $sender->setData(
             'Discussion.Name',
@@ -219,6 +226,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         if ($prefix == '') {
             return;
         }
+        
+        // Purify the prefix.
+        $prefix = Gdn_Format::plainText($prefix);
+        
         $args['Discussion']->Name = wrap(
             $prefix,
             'span',
