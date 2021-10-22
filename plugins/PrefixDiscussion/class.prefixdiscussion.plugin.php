@@ -189,10 +189,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         if ($prefix == '') {
             return;
         }
-        
+
         // Purify the prefix.
         $prefix = Gdn_Format::plainText($prefix);
-        
+
         $sender->addCssFile('prefixdiscussion.css', 'plugins/prefixDiscussion');
         $sender->setData(
             'Discussion.Name',
@@ -226,10 +226,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
         if ($prefix == '') {
             return;
         }
-        
+
         // Purify the prefix.
         $prefix = Gdn_Format::plainText($prefix);
-        
+
         $args['Discussion']->Name = wrap(
             $prefix,
             'span',
@@ -274,6 +274,10 @@ class PrefixDiscussionPlugin extends Gdn_Plugin {
      * @return  void.
      */
     public function discussionModel_beforeSaveDiscussion_handler($sender, $args) {
+        if(!isset($args['FormPostValues']['Prefix'])) {
+            $args['FormPostValues']['Prefix'] = $args['discussion']['Prefix'];
+        }
+
         if (!in_array($args['FormPostValues']['Prefix'], self::getPrefixes())) {
             $args['FormPostValues']['Prefix'] = null;
         }
